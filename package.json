@@ -1,0 +1,23 @@
+{
+  "name": "bagoumbot",
+  "version": "1.0.0",
+  "description": "Multipurpose bot for Duelyst Official Discord.",
+  "main": "bagoumbot.js",
+  "dependencies": {
+    "discord.js": "^10.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ElDynamite/Bagoum-Bot.git"
+  },
+  "author": "Nikit Nainwal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ElDynamite/Bagoum-Bot/issues"
+  },
+  "homepage": "https://github.com/ElDynamite/Bagoum-Bot#readme"
+}
