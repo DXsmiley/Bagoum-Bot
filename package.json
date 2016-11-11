@@ -4,7 +4,8 @@
   "description": "Multipurpose bot for Duelyst Official Discord.",
   "main": "bagoumbot.js",
   "dependencies": {
-    "discord.js": "^10.0.1"
+    "discord.js": "^10.0.1",
+    "request": "^2.78.0"
   },
   "devDependencies": {},
   "scripts": {
