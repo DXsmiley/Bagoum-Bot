@@ -1,3 +1,4 @@
+var cheerio = require("cheerio");
 var Discord = require("discord.js");
 var request = require("request");
 
@@ -6,6 +7,7 @@ var bot = new Discord.Client();
 var loginToken = process.env.DISC_TOKEN;
 var prefix = "$";
 var cardData = {}
+var tierlistData = [];
 
 bot.on("message", msg => {
     if (msg.content.startsWith(prefix) &&
@@ -18,6 +20,8 @@ bot.on("message", msg => {
                 cardNameCommand(args, msg);
             } else if (command == "card-search") {
                 cardSearchCommand(args, msg);
+            } else if (command == "tierlist") {
+                tierlistCommand(args, msg);
             }
         } catch (err) {
             console.log(
@@ -60,6 +64,33 @@ function cardSearchCommand(args, msg) {
     outputCards(msg, cardNames);
 };
 
+function tierlistCommand(args, msg) {
+    let decks = tierlistData;
+    for (var i = 1; i < args.length; i++) {
+        let term = args[i].toLowerCase();
+        decks = decks.filter(function(deck) {
+            return deck.terms.indexOf(term) > -1
+        });
+    }
+    if (!decks.length) {
+        msg.channgel.sendMessage("No decks found with that query");
+        return;
+    }
+    var output = "";
+    if (decks.length > 1) {
+        output += "Found " + decks.length + 
+            " matching decks, fetching the best one...\n";
+    }
+    output += formatDeck(decks[0]);
+    msg.channel.sendMessage(output);
+};
+
+function formatDeck(deck) {
+    return deck.name + " - " + deck.tier + "\n" +
+        "Overview: " + deck.link + "\n" + 
+        deck.image;
+};
+
 function sendFormattedCard(msg, cardName) {
     let card = cardData[cardName];
     let getIdleUrl = "http://www.bagoum.com/getIdle/" + encodeURIComponent(card.name);
@@ -68,7 +99,7 @@ function sendFormattedCard(msg, cardName) {
             console.log(err);
             return;
         }
-        if (resp.statusCode != 200) {
+        if (resp.statusCode !=   0) {
             console.log("Unexpected response code:", resp.statusCode);
             return;
         }
@@ -113,7 +144,7 @@ function splitSearchableText(searchableText) {
     });
 };
 
-function buildCardData(cards) {
+function formatCardData(cards) {
     for (var cardName in cards) {
         if (!cards.hasOwnProperty(cardName)) {
             continue;
@@ -125,17 +156,87 @@ function buildCardData(cards) {
     }
 };
 
-console.log("Building card storage...");
-request("http://bagoum.com/cardsFullJSON", function(err, resp, body) {
+function buildCardData(callback) {
+    console.log("Building card storage...");
+    request("http://bagoum.com/cardsFullJSON", function(err, resp, body) {
+        if (err) {
+            return callback(err);
+        }
+        if (resp.statusCode != 200) {
+            return callback("Invalid status code: " + resp.statusCode);
+        }
+        var cards = JSON.parse(body);
+        formatCardData(cards);
+        return callback(null);
+    });
+};
+
+function buildTierList(callback) {
+    console.log("Building tierlist...");
+    request("http://www.bagoum.com/info/tierlist.txt", function(err, resp, body) {
+        if (err) {
+            return callback(err);
+        }
+        if (resp.statusCode != 200) {
+            return callback("Invalid status code: " + resp.statusCode);
+        }
+        var $ = cheerio.load(body);
+        var tiers = $('h2')
+        tiers = tiers.map(function(i, el) {
+            var decks = [];
+            var deck = $(this).next();
+            while (deck.length && deck[0].attribs && deck[0].attribs.class === "deck") {
+                decks.push(deck);
+                deck = deck.next();
+            }
+            var tier = $(this).text()
+            //Strip first part
+            tier = tier.match(/TIER.*/)[0];
+            return {
+                name: tier,
+                decks: decks
+            }
+        }).toArray();
+        var decks = [];
+        for (var i = 0; i < tiers.length; i++) {
+            var tier = tiers[i];
+            for (var j = 0; j < tier.decks.length; j++) {
+                var deck = tier.decks[j];
+                var name = deck.find('.deckname').text();
+                // Strip Number
+                name = name.match(/\. (.*)/)[1];
+                var featuredImg = "http://www.bagoum.com/" + deck.find('img').attr('src');
+                var linkToArchetype = "http://www.bagoum.com/tierlist.html#" + deck.attr('id');
+                var terms = name.split(/[\s\/.,]/).map((term) => {
+                    return term.toLowerCase();
+                });
+                decks.push({
+                    name: name,
+                    terms: terms,
+                    image: featuredImg,
+                    link: linkToArchetype,
+                    tier: tier.name
+                });
+            }
+        } 
+        tierlistData = decks;
+        return callback(null);
+    });
+};
+
+function initializeData(callback) {
+    console.log("Initializing all data...");
+    buildCardData(function(err) {
+        if (err) {
+            return callback(err); 
+        }
+        buildTierList(callback);
+    });
+};
+
+initializeData((err) => {
     if (err) {
-        console.log(err);
-        return;
+        return console.log(err);
     }
-    if (resp.statusCode != 200) {
-        console.log("Invalid status code:", response.statusCode);
-        return;
-    }
-    var cards = JSON.parse(body);
-    buildCardData(cards);
-    bot.login(loginToken);
+    bot.login(loginToken)
 });
