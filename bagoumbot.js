@@ -20,7 +20,7 @@ bot.on("message", msg => {
             console.log("Executing:", msg.content);
             if (["card-name", "name"].indexOf(command) > -1) {
                 cardNameCommand(args, msg);
-            } else if (["card-search", "card"].indexOf(command) > -1) {
+            } else if (["card-search", "card", "search"].indexOf(command) > -1) {
                 cardSearchCommand(args, msg);
             } else if (["tierlist", "tl"].indexOf(command) > -1) {
                 tierlistCommand(args, msg);
