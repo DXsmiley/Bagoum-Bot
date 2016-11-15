@@ -6,7 +6,7 @@ var bot = new Discord.Client();
 
 var loginToken = process.env.DISC_TOKEN;
 var prefix = "$";
-var cardData = {}
+var cardData = {};
 var tierlistData = [];
 var messageQueues = {};
 const MAX_QUEUE_SIZE = 50;
@@ -18,16 +18,18 @@ bot.on("message", msg => {
             let args = msg.content.substring(1).split(" ");
             let command = args[0];
             console.log("Executing:", msg.content);
-            if (command == "card-name") {
+            if (["card-name", "name"].indexOf(command) > -1) {
                 cardNameCommand(args, msg);
-            } else if (command == "card-search") {
+            } else if (["card-search", "card"].indexOf(command) > -1) {
                 cardSearchCommand(args, msg);
-            } else if (command == "tierlist") {
+            } else if (["tierlist", "tl"].indexOf(command) > -1) {
                 tierlistCommand(args, msg);
             } else if (command == "clean") {
                 cleanChannel(msg.channel);
             } else if (command == "help") {
                 helpCommand(msg);
+            } else {
+                cardSearchCommand(["card-search"].concat(args), msg);
             }
         } catch (err) {
             console.log(
@@ -202,7 +204,12 @@ function outputCards(msg, cardNames) {
 
 function doesTermMatchCard(term, cardName) {
     let card = cardData[cardName];
-    return card.searchableText.indexOf(term) > -1;
+    for (var i = 0; i < card.searchableText.length; i++) {
+        if (card.searchableText[i].includes(term)) {
+            return true;
+        }
+    }
+    return false
 }
 
 function splitSearchableText(searchableText) {
@@ -265,7 +272,7 @@ function buildTierList(callback) {
 }
 
 function get_tiers_from_page($) {
-    var tiers = $('h2')
+    var tiers = $('h2');
     tiers = tiers.map(function(i, el) {
         var decks = [];
         var deck = $(this).next();
@@ -273,7 +280,7 @@ function get_tiers_from_page($) {
             decks.push(deck);
             deck = deck.next();
         }
-        var tier = $(this).text()
+        var tier = $(this).text();
         //Strip first part
         tier = tier.match(/TIER.*/)[0];
         return {
