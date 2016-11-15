@@ -8,6 +8,8 @@ var loginToken = process.env.DISC_TOKEN;
 var prefix = "$";
 var cardData = {}
 var tierlistData = [];
+var messageQueues = {};
+const MAX_QUEUE_SIZE = 50;
 
 bot.on("message", msg => {
     if (msg.content.startsWith(prefix) &&
@@ -22,6 +24,10 @@ bot.on("message", msg => {
                 cardSearchCommand(args, msg);
             } else if (command == "tierlist") {
                 tierlistCommand(args, msg);
+            } else if (command == "clean") {
+                cleanChannel(msg.channel);
+            } else if (command == "help") {
+                helpCommand(msg);
             }
         } catch (err) {
             console.log(
@@ -38,7 +44,7 @@ bot.on('ready', () => {
 });
 
 bot.on("guildMemberAdd", (member) => {
-    member.guild.defaultChannel.sendMessage(`Welcome, ${member.user.username}!`)
+    sendMessage(member.guild.defaultChannel, `Welcome, ${member.user.username}!`);
 });
 
 bot.on("disconnected", () => {
@@ -46,7 +52,28 @@ bot.on("disconnected", () => {
 });
 
 function sendMessage(channel, message) {
-    channel.sendMessage(message);
+    channel.sendMessage(message)
+        .then(message => {
+            addMessageToQueue(channel, message);
+        })
+        .catch(console.log);
+}
+
+function addMessageToQueue(channel, message) {
+    let channel_id = channel.id;
+    if (!messageQueues[channel_id]) {
+        messageQueues[channel_id] = {
+            'index': -1,
+            'queue': []
+        };
+    }
+    let queue = messageQueues[channel_id];
+    queue.index = (queue.index + 1) % MAX_QUEUE_SIZE;
+    if (queue.queue.length == MAX_QUEUE_SIZE) {
+        queue.queue[queue.index] = message;
+    } else {
+        queue.queue.push(message);
+    }
 }
 
 function cardNameCommand(args, msg) {
@@ -55,7 +82,7 @@ function cardNameCommand(args, msg) {
         return name.includes(subname);
     });
     outputCards(msg, cardNames);
-};
+}
 
 function cardSearchCommand(args, msg) {
     let cardNames = Object.keys(cardData);
@@ -66,7 +93,7 @@ function cardSearchCommand(args, msg) {
         });
     }
     outputCards(msg, cardNames);
-};
+}
 
 function tierlistCommand(args, msg) {
     let decks = tierlistData;
@@ -87,13 +114,43 @@ function tierlistCommand(args, msg) {
     }
     output += formatDeck(decks[0]);
     sendMessage(msg.channel, output);
-};
+}
+
+function cleanChannel(channel) {
+    let queue = messageQueues[channel.id];
+    if (queue) {
+        for (var i = 0; i < queue.queue.length; i++) {
+            let message = queue.queue[i];
+            message.delete();
+        }
+        messageQueues[channel.id] = null;
+    }
+    sendMessage(
+        channel, 
+        "Messages have been attempted to be cleaned " +
+        "(may fail if BagoumBot does not have permissions)"
+    );
+}
+
+function helpCommand(msg) {
+    msg.author.sendMessage(
+        "__$card-name__ _name_\n" +
+        "Finds card(s) with the given name\n\n" +
+        "__$card-search__ _term1 term2_\n" +
+        "Finds card(s) that match the given terms\n\n" +
+        "__$tierlist__ _term1 term2_\n" +
+        "Finds the best deck that match the given terms " +
+        "(when no term is given returns the best tierlist)\n\n" +
+        "__$clean__\n" +
+        "Deletes the last " + MAX_QUEUE_SIZE + " messages from BagoumBot"
+    )
+}
 
 function formatDeck(deck) {
     return deck.name + " - " + deck.tier + "\n" +
         "Overview: " + deck.link + "\n" + 
         deck.image;
-};
+}
 
 function sendFormattedCard(msg, cardName) {
     let card = cardData[cardName];
@@ -116,20 +173,24 @@ function sendFormattedCard(msg, cardName) {
         formattedText += "http://" + idleAnimationUrl;
         sendMessage(msg.channel, formattedText);
     });
-};
+}
 
 function outputCards(msg, cardNames) {
     if (cardNames.length == 1) {
         sendFormattedCard(msg, cardNames[0]);
-    } else if (cardNames.length > 1) {
+    } else if (cardNames.length > 1 && cardNames.length <= 32) {
         sendMessage(
             msg.channel,
-            "Too many matches found, pm'ing you the names that matched your query"
-        );
-        msg.author.sendMessage(
+            "Cards that match your query: " +
             cardNames.map(function(cardName) {
                 return cardData[cardName].name;
             }).join(", ")
+        );
+    } else if (cardNames.length > 32) {
+        sendMessage(
+            msg.channel,
+            "Found " + cardNames.length + " matches, please limit " + 
+            "your query."
         );
     } else {
         sendMessage(
@@ -137,12 +198,12 @@ function outputCards(msg, cardNames) {
             "Sorry, but I can't find a card with those parameters."
         );
     }
-};
+}
 
 function doesTermMatchCard(term, cardName) {
     let card = cardData[cardName];
     return card.searchableText.indexOf(term) > -1;
-};
+}
 
 function splitSearchableText(searchableText) {
     let re = /([0-9a-z])([A-Z])|([a-z])([0-9])|([0-9])([a-z])/g;
@@ -150,7 +211,7 @@ function splitSearchableText(searchableText) {
     return searchableText.split(/[ .,]/).map(function(term) {
         return term.toLowerCase()
     });
-};
+}
 
 function formatCardData(cards) {
     for (var cardName in cards) {
@@ -162,7 +223,7 @@ function formatCardData(cards) {
         card.name = cardName;
         cardData[cardName.toLowerCase()] = card
     }
-};
+}
 
 function buildCardData(callback) {
     console.log("Building card storage...");
@@ -177,7 +238,7 @@ function buildCardData(callback) {
         formatCardData(cards);
         return callback(null);
     });
-};
+}
 
 function buildTierList(callback) {
     console.log("Building tierlist...");
@@ -201,7 +262,7 @@ function buildTierList(callback) {
         tierlistData = decks;
         return callback(null);
     });
-};
+}
 
 function get_tiers_from_page($) {
     var tiers = $('h2')
@@ -221,7 +282,7 @@ function get_tiers_from_page($) {
         }
     }).toArray();
     return tiers;
-};
+}
 
 function cheerio_deck_to_deck_object(deck, tier) {
     var name = deck.find('.deckname').text();
@@ -239,7 +300,7 @@ function cheerio_deck_to_deck_object(deck, tier) {
         link: linkToArchetype,
         tier: tier.name
     };
-};
+}
 
 function initializeData(callback) {
     console.log("Initializing all data...");
@@ -249,7 +310,7 @@ function initializeData(callback) {
         }
         buildTierList(callback);
     });
-};
+}
 
 initializeData((err) => {
     if (err) {
