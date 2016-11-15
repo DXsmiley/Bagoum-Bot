@@ -45,6 +45,10 @@ bot.on("disconnected", () => {
     bot.login(loginToken);
 });
 
+function sendMessage(channel, message) {
+    channel.sendMessage(message);
+}
+
 function cardNameCommand(args, msg) {
     let subname = args.slice(1).join(" ").toLowerCase();
     let cardNames = Object.keys(cardData).filter(function(name) {
@@ -73,7 +77,7 @@ function tierlistCommand(args, msg) {
         });
     }
     if (!decks.length) {
-        msg.channgel.sendMessage("No decks found with that query");
+        sendMessage(msg.channel, "No decks found with that query");
         return;
     }
     var output = "";
@@ -82,7 +86,7 @@ function tierlistCommand(args, msg) {
             " matching decks, fetching the best one...\n";
     }
     output += formatDeck(decks[0]);
-    msg.channel.sendMessage(output);
+    sendMessage(msg.channel, output);
 };
 
 function formatDeck(deck) {
@@ -99,7 +103,7 @@ function sendFormattedCard(msg, cardName) {
             console.log(err);
             return;
         }
-        if (resp.statusCode !=   0) {
+        if (resp.statusCode != 200) {
             console.log("Unexpected response code:", resp.statusCode);
             return;
         }
@@ -110,7 +114,7 @@ function sendFormattedCard(msg, cardName) {
             formattedText += card.attack + "/" + card.health + "\n";
         }
         formattedText += "http://" + idleAnimationUrl;
-        msg.channel.sendMessage(formattedText);
+        sendMessage(msg.channel, formattedText);
     });
 };
 
@@ -118,14 +122,18 @@ function outputCards(msg, cardNames) {
     if (cardNames.length == 1) {
         sendFormattedCard(msg, cardNames[0]);
     } else if (cardNames.length > 1) {
-        msg.channel.sendMessage(
+        sendMessage(
+            msg.channel,
             "Too many matches found, pm'ing you the names that matched your query"
         );
         msg.author.sendMessage(
-            cardNames.join(", ")
+            cardNames.map(function(cardName) {
+                return cardData[cardName].name;
+            }).join(", ")
         );
     } else {
-        msg.channel.sendMessage(
+        sendMessage(
+            msg.channel,
             "Sorry, but I can't find a card with those parameters."
         );
     }
@@ -173,7 +181,7 @@ function buildCardData(callback) {
 
 function buildTierList(callback) {
     console.log("Building tierlist...");
-    request("http://www.bagoum.com/info/tierlist.txt", function(err, resp, body) {
+    request("http://www.bagoum.com/info/tierlist.html", function(err, resp, body) {
         if (err) {
             return callback(err);
         }
@@ -181,47 +189,56 @@ function buildTierList(callback) {
             return callback("Invalid status code: " + resp.statusCode);
         }
         var $ = cheerio.load(body);
-        var tiers = $('h2')
-        tiers = tiers.map(function(i, el) {
-            var decks = [];
-            var deck = $(this).next();
-            while (deck.length && deck[0].attribs && deck[0].attribs.class === "deck") {
-                decks.push(deck);
-                deck = deck.next();
-            }
-            var tier = $(this).text()
-            //Strip first part
-            tier = tier.match(/TIER.*/)[0];
-            return {
-                name: tier,
-                decks: decks
-            }
-        }).toArray();
+        var tiers = get_tiers_from_page($);
         var decks = [];
         for (var i = 0; i < tiers.length; i++) {
             var tier = tiers[i];
             for (var j = 0; j < tier.decks.length; j++) {
-                var deck = tier.decks[j];
-                var name = deck.find('.deckname').text();
-                // Strip Number
-                name = name.match(/\. (.*)/)[1];
-                var featuredImg = "http://www.bagoum.com/" + deck.find('img').attr('src');
-                var linkToArchetype = "http://www.bagoum.com/tierlist.html#" + deck.attr('id');
-                var terms = name.split(/[\s\/.,]/).map((term) => {
-                    return term.toLowerCase();
-                });
-                decks.push({
-                    name: name,
-                    terms: terms,
-                    image: featuredImg,
-                    link: linkToArchetype,
-                    tier: tier.name
-                });
+                let cheerio_deck = tier.decks[j];
+                decks.push(cheerio_deck_to_deck_object(cheerio_deck, tier));
             }
         } 
         tierlistData = decks;
         return callback(null);
     });
+};
+
+function get_tiers_from_page($) {
+    var tiers = $('h2')
+    tiers = tiers.map(function(i, el) {
+        var decks = [];
+        var deck = $(this).next();
+        while (deck.length && deck[0].attribs && deck[0].attribs.class === "deck") {
+            decks.push(deck);
+            deck = deck.next();
+        }
+        var tier = $(this).text()
+        //Strip first part
+        tier = tier.match(/TIER.*/)[0];
+        return {
+            name: tier,
+            decks: decks
+        }
+    }).toArray();
+    return tiers;
+};
+
+function cheerio_deck_to_deck_object(deck, tier) {
+    var name = deck.find('.deckname').text();
+    // Strip Number
+    name = name.match(/\. (.*)/)[1];
+    var featuredImg = "http://www.bagoum.com/" + deck.find('img').attr('src');
+    var linkToArchetype = "http://www.bagoum.com/tierlist.html#" + deck.attr('id');
+    var terms = name.split(/[\s\/.,]/).map((term) => {
+        return term.toLowerCase();
+    });
+    return {
+        name: name,
+        terms: terms,
+        image: featuredImg,
+        link: linkToArchetype,
+        tier: tier.name
+    };
 };
 
 function initializeData(callback) {
