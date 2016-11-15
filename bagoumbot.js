@@ -6,7 +6,7 @@ var bot = new Discord.Client();
 
 var loginToken = process.env.DISC_TOKEN;
 var prefix = "$";
-var cardData = {}
+var cardData = {};
 var tierlistData = [];
 
 bot.on("message", msg => {
@@ -16,12 +16,14 @@ bot.on("message", msg => {
             let args = msg.content.substring(1).split(" ");
             let command = args[0];
             console.log("Executing:", msg.content);
-            if (command == "card-name") {
+            if (["card-name", "name"].indexOf(command) > -1) {
                 cardNameCommand(args, msg);
-            } else if (command == "card-search") {
+            } else if (["card-search", "card"].indexOf(command) > -1) {
                 cardSearchCommand(args, msg);
-            } else if (command == "tierlist") {
+            } else if (["tierlist", "tl"].indexOf(command) > -1) {
                 tierlistCommand(args, msg);
+            } else {
+                cardSearchCommand(["card-search"].concat(args), msg);
             }
         } catch (err) {
             console.log(
@@ -47,7 +49,7 @@ bot.on("disconnected", () => {
 
 function sendMessage(channel, message) {
     channel.sendMessage(message);
-}
+};
 
 function cardNameCommand(args, msg) {
     let subname = args.slice(1).join(" ").toLowerCase();
@@ -204,7 +206,7 @@ function buildTierList(callback) {
 };
 
 function get_tiers_from_page($) {
-    var tiers = $('h2')
+    var tiers = $('h2');
     tiers = tiers.map(function(i, el) {
         var decks = [];
         var deck = $(this).next();
@@ -212,7 +214,7 @@ function get_tiers_from_page($) {
             decks.push(deck);
             deck = deck.next();
         }
-        var tier = $(this).text()
+        var tier = $(this).text();
         //Strip first part
         tier = tier.match(/TIER.*/)[0];
         return {
