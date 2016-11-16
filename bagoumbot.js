@@ -4,7 +4,7 @@ var request = require("request");
 
 var bot = new Discord.Client();
 
-var loginToken = process.env.DISC_TOKEN;
+var loginToken = process.env.DISCORD_TOKEN;
 var prefix = "$";
 var cardData = {};
 var tierlistData = [];
@@ -137,12 +137,15 @@ function cleanChannel(channel) {
 function helpCommand(msg) {
     msg.author.sendMessage(
         "__$card-name__ _name_\n" +
-        "Finds card(s) with the given name\n\n" +
-        "__$card-search__ _term1 term2_\n" +
-        "Finds card(s) that match the given terms\n\n" +
-        "__$tierlist__ _term1 term2_\n" +
+        "Finds card(s) with the given name\n" +
+        "\tAlternate forms: $name\n\n" +
+        "__$card-search__ _term1 term2_...\n" +
+        "Finds card(s) that match the given terms\n" +
+        "\tAlternate forms: $card, $search, $\n\n" +
+        "__$tierlist__ _term1 term2_...\n" +
         "Finds the best deck that match the given terms " +
-        "(when no term is given returns the best tierlist)\n\n" +
+        "(when no term is given returns the best tierlist)\n" +
+        "\tAlternate forms: $tl\n\n" +
         "__$clean__\n" +
         "Deletes the last " + MAX_QUEUE_SIZE + " messages from BagoumBot"
     )
@@ -150,7 +153,7 @@ function helpCommand(msg) {
 
 function formatDeck(deck) {
     return deck.name + " - " + deck.tier + "\n" +
-        "Overview: " + deck.link + "\n" + 
+        "Overview: " + deck.link + "\n\n" +
         deck.image;
 }
 
@@ -166,11 +169,18 @@ function sendFormattedCard(msg, cardName) {
             console.log("Unexpected response code:", resp.statusCode);
             return;
         }
-        formattedText = card.name + "   " + card.manaCost + "\n" + 
-            card.shortfaction + " " + card.type + " - " + card.expansion + "\n" +  
+        var raceVal = "";
+        if (card["race"] != "") {
+            var racewords = card["race"].split(" ").map(x => {
+                return x.substring(0, 1).toUpperCase() + x.substring(1).toLowerCase();
+            });
+            raceVal = ` (${racewords.join(" ")})`;
+        }
+        formattedText = card.name + ` -- ${card.shortfaction}\n` +
+            card.type + raceVal + " -- " + card.expansion + "\n" +
             card.description + "\n";
         if (card.type === "Unit") {
-            formattedText += card.attack + "/" + card.health + "\n";
+            formattedText += card.manaCost + " mana " + card.attack + "/" + card.health + "\n";
         }
         formattedText += "http://" + idleAnimationUrl;
         sendMessage(msg.channel, formattedText);
@@ -295,7 +305,7 @@ function cheerio_deck_to_deck_object(deck, tier) {
     var name = deck.find('.deckname').text();
     // Strip Number
     name = name.match(/\. (.*)/)[1];
-    var featuredImg = "http://www.bagoum.com/" + deck.find('img').attr('src');
+    var featuredImg = "http://www.bagoum.com" + deck.find('img').attr('src');
     var linkToArchetype = "http://www.bagoum.com/tierlist.html#" + deck.attr('id');
     var terms = name.split(/[\s\/.,]/).map((term) => {
         return term.toLowerCase();
