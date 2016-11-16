@@ -10,13 +10,15 @@ var cardData = {};
 var tierlistData = [];
 var messageQueues = {};
 const MAX_QUEUE_SIZE = 50;
+const DO_DISCORD_INV = "https://discord.gg/0WbpmyLbu52EBhiw";
+
 
 bot.on("message", msg => {
     if (msg.content.startsWith(prefix) &&
         msg.content.length > 1 && !msg.author.bot) {
         try {
             let args = msg.content.substring(1).split(" ");
-            let command = args[0];
+            let command = args[0].toLowerCase();
             console.log("Executing:", msg.content);
             if (["card-name", "name"].indexOf(command) > -1) {
                 cardNameCommand(args, msg);
@@ -24,6 +26,16 @@ bot.on("message", msg => {
                 cardSearchCommand(args, msg);
             } else if (["tierlist", "tl"].indexOf(command) > -1) {
                 tierlistCommand(args, msg);
+            } else if (["bagoum"].indexOf(command) > -1) {
+                linkToBagoum(msg);
+            } else if (["notation"].indexOf(command) > -1) {
+                linkToNotation(msg);
+            } else if (["deckbuilder", "db"].indexOf(command) > -1) {
+                linkToDB(msg);
+            } else if (["reddit", "subreddit"].indexOf(command) > -1) {
+                linkToReddit(msg);
+            } else if (["discord", "do"].indexOf(command) > -1) {
+                linkToDiscord(msg);
             } else if (command == "clean") {
                 cleanChannel(msg.channel);
             } else if (command == "help") {
@@ -99,6 +111,10 @@ function cardSearchCommand(args, msg) {
 
 function tierlistCommand(args, msg) {
     let decks = tierlistData;
+    if (args.length == 1) {
+        sendMessage(msg.channel, "The Bagoum tierlist can be found here:\n\thttp://www.bagoum.com/tierlist.html");
+        return;
+    }
     for (var i = 1; i < args.length; i++) {
         let term = args[i].toLowerCase();
         decks = decks.filter(function(deck) {
@@ -111,7 +127,7 @@ function tierlistCommand(args, msg) {
     }
     var output = "";
     if (decks.length > 1) {
-        output += "Found " + decks.length + 
+        output += "Found " + decks.length +
             " matching decks, fetching the best one...\n";
     }
     output += formatDeck(decks[0]);
@@ -128,7 +144,7 @@ function cleanChannel(channel) {
         messageQueues[channel.id] = null;
     }
     sendMessage(
-        channel, 
+        channel,
         "Messages have been attempted to be cleaned " +
         "(may fail if BagoumBot does not have permissions)"
     );
@@ -150,6 +166,33 @@ function helpCommand(msg) {
         "Deletes the last " + MAX_QUEUE_SIZE + " messages from BagoumBot"
     )
 }
+
+function linkToBagoum(msg) {
+    sendMessage(msg.channel,
+        "Bagoum, the one-stop site for all your Duelyst needs!\n\thttp://www.bagoum.com");
+}
+function linkToNotation(msg) {
+    sendMessage(msg.channel,
+        "A guide to Duelyst notation can be found here:\n\thttp://www.bagoum.com/notation.html");
+}
+function linkToDB(msg) {
+    sendMessage(msg.channel,
+        "The Bagoum deckbuilder can be found here:\n\thttp://www.bagoum.com/deckbuilder");
+}
+
+function linkToReddit(msg) {
+    sendMessage(msg.channel,
+        "Duelyst Subreddit:\n\thttps://www.reddit.com/r/duelyst/");
+}
+
+function linkToDiscord(msg) {
+    sendMessage(msg.channel,
+        `Duelyst Official Discord:\n\t${DO_DISCORD_INV}`);
+}
+
+
+
+
 
 function formatDeck(deck) {
     return deck.name + " - " + deck.tier + "\n" +
@@ -179,10 +222,11 @@ function sendFormattedCard(msg, cardName) {
         formattedText = card.name + ` -- ${card.shortfaction}\n` +
             card.type + raceVal + " -- " + card.expansion + "\n" +
             card.description + "\n";
-        if (card.type === "Unit") {
-            formattedText += card.manaCost + " mana " + card.attack + "/" + card.health + "\n";
+        formattedText += card.manaCost + " mana";
+        if (["Unit","General"].indexOf(card.type) > -1) {
+            formattedText += " " + card.attack + "/" + card.health;
         }
-        formattedText += "http://" + idleAnimationUrl;
+        formattedText += "\n\nhttp://" + idleAnimationUrl;
         sendMessage(msg.channel, formattedText);
     });
 }
@@ -201,7 +245,7 @@ function outputCards(msg, cardNames) {
     } else if (cardNames.length > 32) {
         sendMessage(
             msg.channel,
-            "Found " + cardNames.length + " matches, please limit " + 
+            "Found " + cardNames.length + " matches, please limit " +
             "your query."
         );
     } else {
@@ -275,7 +319,7 @@ function buildTierList(callback) {
                 let cheerio_deck = tier.decks[j];
                 decks.push(cheerio_deck_to_deck_object(cheerio_deck, tier));
             }
-        } 
+        }
         tierlistData = decks;
         return callback(null);
     });
@@ -323,7 +367,7 @@ function initializeData(callback) {
     console.log("Initializing all data...");
     buildCardData(function(err) {
         if (err) {
-            return callback(err); 
+            return callback(err);
         }
         buildTierList(callback);
     });
