@@ -42,6 +42,8 @@ bot.on("message", msg => {
                 linkToTwitch(msg);
             } else if (["tournament", "tournaments", "tourney", "tourneys", "battlefy"].indexOf(command) > -1) {
                 linkToBattlefy(msg);
+            } else if (["discoverable", "discover"].indexOf(command) > -1) {
+                meme("discoverable.png", msg);
             } else if (command == "clean") {
                 cleanChannel(msg.channel);
             } else if (command == "help") {
@@ -214,9 +216,12 @@ function linkToBattlefy(msg) {
     sendMessage(msg.channel,
         "Duelyst tournaments on Battlefy:\n\thttps://battlefy.com/discovery/duelyst\n" +
         "Duelyst tournament Discord server:\n\thttps://discord.gg/q6YWGTm");
-
 }
 
+function meme(imgLink, msg) {
+    sendMessage(msg.channel,
+    "http://www.bagoum.com/images/memes/" + imgLink);
+}
 
 function formatDeck(deck) {
     return deck.name + " - " + deck.tier + "\n" +
