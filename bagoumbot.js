@@ -36,6 +36,12 @@ bot.on("message", msg => {
                 linkToReddit(msg);
             } else if (["discord", "do"].indexOf(command) > -1) {
                 linkToDiscord(msg);
+            } else if (["forum", "forums"].indexOf(command) > -1) {
+                linkToForums(msg);
+            } else if (["stream", "streams", "twitch", "strim"].indexOf(command) > -1) {
+                linkToTwitch(msg);
+            } else if (["tournament", "tournaments", "tourney", "tourneys", "battlefy"].indexOf(command) > -1) {
+                linkToBattlefy(msg);
             } else if (command == "clean") {
                 cleanChannel(msg.channel);
             } else if (command == "help") {
@@ -92,7 +98,7 @@ function addMessageToQueue(channel, message) {
 
 function cardNameCommand(args, msg) {
     let subname = args.slice(1).join(" ").toLowerCase();
-    let cardNames = Object.keys(cardData).filter(function(name) {
+    let cardNames = Object.keys(cardData).filter(function (name) {
         return name.includes(subname);
     });
     outputCards(msg, cardNames);
@@ -102,7 +108,7 @@ function cardSearchCommand(args, msg) {
     let cardNames = Object.keys(cardData);
     for (var i = 1; i < args.length; i++) {
         let term = args[i].toLowerCase();
-        cardNames = cardNames.filter(function(cardName) {
+        cardNames = cardNames.filter(function (cardName) {
             return doesTermMatchCard(term, cardName);
         });
     }
@@ -117,7 +123,7 @@ function tierlistCommand(args, msg) {
     }
     for (var i = 1; i < args.length; i++) {
         let term = args[i].toLowerCase();
-        decks = decks.filter(function(deck) {
+        decks = decks.filter(function (deck) {
             return deck.terms.indexOf(term) > -1
         });
     }
@@ -163,7 +169,11 @@ function helpCommand(msg) {
         "(when no term is given returns the best tierlist)\n" +
         "\tAlternate forms: $tl\n\n" +
         "__$clean__\n" +
-        "Deletes the last " + MAX_QUEUE_SIZE + " messages from BagoumBot"
+        "Deletes the last " + MAX_QUEUE_SIZE + " messages from BagoumBot\n\n" +
+        "__$bagoum__, __$notation__, __$deckbuilder__\n" +
+        "Returns relevant links to the Bagoum Duelyst website\n\n" +
+        "__$reddit__, __$discord__, __$forums__, __$twitch__, __$tourneys__\n" +
+        "Returns relevant links to other Duelyst resources"
     )
 }
 
@@ -190,8 +200,22 @@ function linkToDiscord(msg) {
         `Duelyst Official Discord:\n\t${DO_DISCORD_INV}`);
 }
 
+function linkToForums(msg) {
+    sendMessage(msg.channel,
+        "Duelyst Official Forums:\n\thttps://forums.duelyst.com/");
+}
 
+function linkToTwitch(msg) {
+    sendMessage(msg.channel,
+        "Duelyst on Twitch:\n\thttps://www.twitch.tv/directory/game/Duelyst");
+}
 
+function linkToBattlefy(msg) {
+    sendMessage(msg.channel,
+        "Duelyst tournaments on Battlefy:\n\thttps://battlefy.com/discovery/duelyst\n" +
+        "Duelyst tournament Discord server:\n\thttps://discord.gg/q6YWGTm");
+
+}
 
 
 function formatDeck(deck) {
@@ -203,7 +227,7 @@ function formatDeck(deck) {
 function sendFormattedCard(msg, cardName) {
     let card = cardData[cardName];
     let getIdleUrl = "http://www.bagoum.com/getIdle/" + encodeURIComponent(card.name);
-    request(getIdleUrl, function(err, resp, idleAnimationUrl) {
+    request(getIdleUrl, function (err, resp, idleAnimationUrl) {
         if (err) {
             console.log(err);
             return;
@@ -223,7 +247,7 @@ function sendFormattedCard(msg, cardName) {
             card.type + raceVal + " -- " + card.expansion + "\n" +
             card.description + "\n";
         formattedText += card.manaCost + " mana";
-        if (["Unit","General"].indexOf(card.type) > -1) {
+        if (["Unit", "General"].indexOf(card.type) > -1) {
             formattedText += " " + card.attack + "/" + card.health;
         }
         formattedText += "\n\nhttp://" + idleAnimationUrl;
@@ -238,7 +262,7 @@ function outputCards(msg, cardNames) {
         sendMessage(
             msg.channel,
             "Cards that match your query: " +
-            cardNames.map(function(cardName) {
+            cardNames.map(function (cardName) {
                 return cardData[cardName].name;
             }).join(", ")
         );
@@ -269,7 +293,7 @@ function doesTermMatchCard(term, cardName) {
 function splitSearchableText(searchableText) {
     let re = /([0-9a-z])([A-Z])|([a-z])([0-9])|([0-9])([a-z])/g;
     searchableText = searchableText.replace(re, '$1$3$5 $2$4$6');
-    return searchableText.split(/[ .,]/).map(function(term) {
+    return searchableText.split(/[ .,]/).map(function (term) {
         return term.toLowerCase()
     });
 }
@@ -288,7 +312,7 @@ function formatCardData(cards) {
 
 function buildCardData(callback) {
     console.log("Building card storage...");
-    request("http://bagoum.com/cardsFullJSON", function(err, resp, body) {
+    request("http://bagoum.com/cardsFullJSON", function (err, resp, body) {
         if (err) {
             return callback(err);
         }
@@ -303,7 +327,7 @@ function buildCardData(callback) {
 
 function buildTierList(callback) {
     console.log("Building tierlist...");
-    request("http://www.bagoum.com/info/tierlist.html", function(err, resp, body) {
+    request("http://www.bagoum.com/info/tierlist.html", function (err, resp, body) {
         if (err) {
             return callback(err);
         }
@@ -327,7 +351,7 @@ function buildTierList(callback) {
 
 function get_tiers_from_page($) {
     var tiers = $('h2');
-    tiers = tiers.map(function(i, el) {
+    tiers = tiers.map(function (i, el) {
         var decks = [];
         var deck = $(this).next();
         while (deck.length && deck[0].attribs && deck[0].attribs.class === "deck") {
@@ -365,7 +389,7 @@ function cheerio_deck_to_deck_object(deck, tier) {
 
 function initializeData(callback) {
     console.log("Initializing all data...");
-    buildCardData(function(err) {
+    buildCardData(function (err) {
         if (err) {
             return callback(err);
         }
