@@ -231,7 +231,7 @@ function formatDeck(deck) {
 
 function sendFormattedCard(msg, cardName) {
     let card = cardData[cardName];
-    let getIdleUrl = "http://www.bagoum.com/getIdleNS/" + encodeURIComponent(card.name);
+    let getIdleUrl = "http://www.bagoum.com/getIdleNS/" + encodeURIComponent(card.name); 
     request(getIdleUrl, function (err, resp, idleAnimationUrl) {
         if (err) {
             console.log(err);
