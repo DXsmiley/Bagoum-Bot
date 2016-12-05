@@ -42,8 +42,8 @@ bot.on("message", msg => {
                 linkToTwitch(msg);
             } else if (["tournament", "tournaments", "tourney", "tourneys", "battlefy"].indexOf(command) > -1) {
                 linkToBattlefy(msg);
-            } else if (["discoverable", "discover"].indexOf(command) > -1) {
-                meme("discoverable.png", msg);
+            } else if (memeDict.hasOwnProperty(command)) {
+                meme(memeDict[command], msg);
             } else if (command == "clean") {
                 cleanChannel(msg.channel);
             } else if (command == "help") {
@@ -58,6 +58,27 @@ bot.on("message", msg => {
         }
     }
 });
+
+var memeDict = {
+    "shingeki": "attackonironcliffe.jpg",
+    "blackbox": "blackbox.png",
+    "bloodfire": "bloodfiretotem.png",
+    "cliffe": "cliffe.png",
+    "discoverable": "discoverable.png",
+    "discover": "discoverable.png",
+    "div": "div.png",
+    "groovylion": "groovylion.png",
+    "moar":"moarregalia.png",
+    "nothingpersonal":"nothingpersonal.png",
+    "pushdoge":"pushdoge.png",
+    "ripkron":"ripkron.jpg",
+    "nearby":"siphon.png",
+    "tigered":"tigered.jpg",
+    "TRIGGERED":"tigered.jpg",
+    "tlreva": "tlreva.png",
+    "topdeck":"topdeck.png",
+    "myfox": "zenrui.png"
+};
 
 bot.on('ready', () => {
     console.log(`Bot logged on to ${bot.channels.map(x => {
@@ -231,7 +252,7 @@ function formatDeck(deck) {
 
 function sendFormattedCard(msg, cardName) {
     let card = cardData[cardName];
-    let getIdleUrl = "http://www.bagoum.com/getIdleNS/" + encodeURIComponent(card.name); 
+    let getIdleUrl = "http://www.bagoum.com/getIdleNS/" + encodeURIComponent(card.name);
     request(getIdleUrl, function (err, resp, idleAnimationUrl) {
         if (err) {
             console.log(err);
