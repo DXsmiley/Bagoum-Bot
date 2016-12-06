@@ -6,6 +6,7 @@ var bot = new Discord.Client();
 
 var loginToken = process.env.DISCORD_TOKEN;
 var prefix = "$";
+var cardNameSeparator = /\[\[([a-zA-Z0-9 '-]+)\]\]/;
 var cardData = {};
 var tierlistData = [];
 var messageQueues = {};
@@ -56,6 +57,8 @@ bot.on("message", msg => {
                 "Had error processing", msg.content, " error:", err
             );
         }
+    } else if (msg.content.match(cardNameSeparator) && !msg.author.bot) {
+        nameSeparateCommand(msg);
     }
 });
 
@@ -127,6 +130,7 @@ function cardNameCommand(args, msg) {
     outputCards(msg, cardNames);
 }
 
+
 function cardSearchCommand(args, msg) {
     let cardNames = Object.keys(cardData);
     for (var i = 1; i < args.length; i++) {
@@ -135,6 +139,14 @@ function cardSearchCommand(args, msg) {
             return doesTermMatchCard(term, cardName);
         });
     }
+    outputCards(msg, cardNames);
+}
+
+function nameSeparateCommand(msg) {
+    let cardNames = isolateCardNamesFromString(msg.content);
+    cardNames = cardNames.filter(function (cardName) {
+        return cardData[cardName];
+    });
     outputCards(msg, cardNames);
 }
 
@@ -147,7 +159,7 @@ function tierlistCommand(args, msg) {
     for (var i = 1; i < args.length; i++) {
         let term = args[i].toLowerCase();
         decks = decks.filter(function (deck) {
-            return deck.terms.indexOf(term) > -1
+            return doesTermMatchDeck(term, deck);
         });
     }
     if (!decks.length) {
@@ -184,6 +196,8 @@ function helpCommand(msg) {
         "__$card-name__ _name_\n" +
         "Finds card(s) with the given name\n" +
         "\tAlternate forms: $name\n\n" +
+        "[[_name_]]\n" +
+        "Finds card with exact match of name\n\n" +
         "__$card-search__ _term1 term2_...\n" +
         "Finds card(s) that match the given terms\n" +
         "\tAlternate forms: $card, $search, $\n\n" +
@@ -196,7 +210,8 @@ function helpCommand(msg) {
         "__$bagoum__, __$notation__, __$deckbuilder__\n" +
         "Returns relevant links to the Bagoum Duelyst website\n\n" +
         "__$reddit__, __$discord__, __$forums__, __$twitch__, __$tourneys__\n" +
-        "Returns relevant links to other Duelyst resources"
+        "Returns relevant links to other Duelyst resources\n\n" +
+        "Please report any issues to https://github.com/ElDynamite/Bagoum-Bot"
     )
 }
 
@@ -313,7 +328,16 @@ function doesTermMatchCard(term, cardName) {
             return true;
         }
     }
-    return false
+    return false;
+}
+
+function doesTermMatchDeck(term, deck) {
+    for (var i = 0; i < deck.terms.length; i++) {
+        if (deck.terms[i].includes(term)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function splitSearchableText(searchableText) {
@@ -322,6 +346,17 @@ function splitSearchableText(searchableText) {
     return searchableText.split(/[ .,]/).map(function (term) {
         return term.toLowerCase()
     });
+}
+
+function isolateCardNamesFromString(s) {
+    let cardNames = [];
+    let nameMatch = s.match(cardNameSeparator);
+    while (nameMatch) {
+        cardNames.push(nameMatch[1].toLowerCase());
+        s = s.replace(cardNameSeparator, "");
+        nameMatch = s.match(cardNameSeparator);
+    }
+    return cardNames;
 }
 
 function formatCardData(cards) {
