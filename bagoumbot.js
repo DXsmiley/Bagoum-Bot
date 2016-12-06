@@ -80,7 +80,12 @@ var memeDict = {
     "TRIGGERED":"tigered.jpg",
     "tlreva": "tlreva.png",
     "topdeck":"topdeck.png",
-    "myfox": "zenrui.png"
+    "myfox": "zenrui.png",
+    "1.71":"p171.png",
+    "1.74":"p174.png",
+    "patch":"patch.png",
+    "waifu":"waifu.png",
+    "bae":"waifu.png"
 };
 
 bot.on('ready', () => {
