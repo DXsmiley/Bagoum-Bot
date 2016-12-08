@@ -291,6 +291,7 @@ function sendFormattedCard(msg, cardName) {
         }
         formattedText = card.name + ` -- ${card.shortfaction}\n` +
             card.type + raceVal + " -- " + card.expansion + "\n" +
+            card.rarity + "\n" +
             card.description + "\n";
         formattedText += card.manaCost + " mana";
         if (["Unit", "General"].indexOf(card.type) > -1) {
