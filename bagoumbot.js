@@ -463,7 +463,6 @@ function initializeData(callback) {
         if (err) {
             return callback(err);
         }
-        console.log(cardData["mechaz0r!"]);
         buildTierList(callback);
     });
 }
