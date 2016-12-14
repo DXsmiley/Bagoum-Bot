@@ -6,7 +6,7 @@ var bot = new Discord.Client();
 
 var loginToken = process.env.DISCORD_TOKEN;
 var prefix = "$";
-var cardNameSeparator = /\[\[([a-zA-Z0-9 '-]+)\]\]/;
+var cardNameSeparator = /\[\[([a-zA-Z0-9 '!-]+)\]\]/;
 var cardData = {};
 var tierlistData = [];
 var messageQueues = {};
@@ -92,6 +92,7 @@ bot.on('ready', () => {
     console.log(`Bot logged on to ${bot.channels.map(x => {
         return x.name;
     })}`);
+    bot.user.setGame("Duelyst");
 });
 
 bot.on("guildMemberAdd", (member) => {
@@ -138,6 +139,13 @@ function cardNameCommand(args, msg) {
 
 function cardSearchCommand(args, msg) {
     let cardNames = Object.keys(cardData);
+    givenSearch = args.slice(1).join(" ").toLowerCase();
+    for (var ci = 0; ci < cardNames.length; ci++) {
+        if (cardNames[ci] == givenSearch) {
+            outputCards(msg, [cardNames[ci]]);
+            return;
+        }
+    }
     for (var i = 1; i < args.length; i++) {
         let term = args[i].toLowerCase();
         cardNames = cardNames.filter(function (cardName) {
@@ -202,7 +210,7 @@ function helpCommand(msg) {
         "Finds card(s) with the given name\n" +
         "\tAlternate forms: $name\n\n" +
         "[[_name_]]\n" +
-        "Finds card with exact match of name\n\n" +
+        "Finds card that have this exact name\n\n" +
         "__$card-search__ _term1 term2_...\n" +
         "Finds card(s) that match the given terms\n" +
         "\tAlternate forms: $card, $search, $\n\n" +
@@ -217,7 +225,8 @@ function helpCommand(msg) {
         "__$reddit__, __$discord__, __$forums__, __$twitch__, __$tourneys__\n" +
         "Returns relevant links to other Duelyst resources\n\n" +
         "Please report any issues to https://github.com/ElDynamite/Bagoum-Bot"
-    )
+    );
+    sendMessage(msg.channel, `${msg.author.username}, help has been sent.`);
 }
 
 function linkToBagoum(msg) {
@@ -328,13 +337,7 @@ function outputCards(msg, cardNames) {
 }
 
 function doesTermMatchCard(term, cardName) {
-    let card = cardData[cardName];
-    for (var i = 0; i < card.searchableText.length; i++) {
-        if (card.searchableText[i].includes(term)) {
-            return true;
-        }
-    }
-    return false;
+    return cardData[cardName].searchableText.includes(term.toLowerCase());
 }
 
 function doesTermMatchDeck(term, deck) {
@@ -345,14 +348,14 @@ function doesTermMatchDeck(term, deck) {
     }
     return false;
 }
-
+/*
 function splitSearchableText(searchableText) {
     let re = /([0-9a-z])([A-Z])|([a-z])([0-9])|([0-9])([a-z])/g;
-    searchableText = searchableText.replace(re, '$1$3$5 $2$4$6');
+    //searchableText = searchableText.replace(re, '$1$3$5 $2$4$6');
     return searchableText.split(/[ .,]/).map(function (term) {
         return term.toLowerCase()
     });
-}
+}*/
 
 function isolateCardNamesFromString(s) {
     let cardNames = [];
@@ -371,9 +374,9 @@ function formatCardData(cards) {
             continue;
         }
         card = cards[cardName];
-        card.searchableText = splitSearchableText(card.searchableText);
+        card.searchableText = card.searchableText.toLowerCase();
         card.name = cardName;
-        cardData[cardName.toLowerCase()] = card
+        cardData[cardName.toLowerCase()] = card;
     }
 }
 
@@ -460,6 +463,7 @@ function initializeData(callback) {
         if (err) {
             return callback(err);
         }
+        console.log(cardData["mechaz0r!"]);
         buildTierList(callback);
     });
 }
