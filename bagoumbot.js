@@ -298,10 +298,12 @@ function sendFormattedCard(msg, cardName) {
             });
             raceVal = ` (${racewords.join(" ")})`;
         }
+        description = card.description.replace(/<\/?b>/g, '**')
+        description = description.replace('<br>', '\n')
         formattedText = card.name + ` -- ${card.shortfaction}\n` +
             card.type + raceVal + " -- " + card.expansion + "\n" +
             card.rarity + "\n" +
-            card.description + "\n";
+            description + "\n";
         formattedText += card.manaCost + " mana";
         if (["Unit", "General"].indexOf(card.type) > -1) {
             formattedText += " " + card.attack + "/" + card.health;
